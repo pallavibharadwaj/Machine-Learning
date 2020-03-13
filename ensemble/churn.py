@@ -3,12 +3,10 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import seaborn as sns
-sns.set()
-plt.figure(figsize=(20,20))
+import statsmodels.api as sm
 
 from sklearn import preprocessing
 from sklearn.ensemble import RandomForestClassifier
-import statsmodels.api as sm
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 
@@ -26,6 +24,13 @@ def missing_values(df):
 			missing_cols.append(col)
 			missing_count += missing
 
+			# replace missing values with mean of the column
+			# TotalCharges is a numeric feature
+			df[col] = pd.to_numeric(df[col], downcast="float")
+
+			mean = df[col].mean()
+			df[col] = df[col].replace(np.nan, mean)
+
 	# columns having missing values
 	# TotalCharges is the only column with missing values
 	print("Columns with missing values: %s" %(missing_cols))
@@ -34,16 +39,6 @@ def missing_values(df):
 	total = df.shape[0] * df.shape[1]
 	percent = (missing_count/total) * 100
 	print("Percentage of missing values: %.4f" %(percent))
-
-	# replace missing values with mean of the column
-	# TotalCharges is a numeric feature
-	for col in missing_cols:
-		# convert to numeric feature
-		df[col] = pd.to_numeric(df[col], downcast="float")
-
-		mean = df[col].mean()
-		df[col] = df[col].replace(np.nan, mean)
-
 	return df
 
 
@@ -59,6 +54,8 @@ class feature_selection:
 		corrmat = self.df.corr()
 
 		# plot heat map of correlation matrix
+		plt.figure(figsize=(20,20))
+		sns.set()
 		sns.heatmap(corrmat, annot=True)
 		plt.show()
 
@@ -66,7 +63,6 @@ class feature_selection:
 		unrelated = corrmat[abs(corrmat) < 0.05]['Churn']
 		unrelated_cols = unrelated[~np.isnan(unrelated)].keys()
 		df = self.df.drop(columns=unrelated_cols)
-
 		return df
 
 
@@ -90,7 +86,6 @@ class feature_selection:
 				index = np.where(regressor.pvalues==max_p)
 				features = np.delete(features, index, axis=1)
 				columns = np.delete(columns, index)
-
 		return (features, columns, labels)
 
 
@@ -122,7 +117,7 @@ def main():
 	# backward feature selection
 	features, selected_columns, labels = fs.backward_elimination(df, p_value=0.05)
 
-	print("Selected Columns: ", selected_columns)
+	print("Selected Columns: ", selected_columns.tolist())
 
 	# Task 3: classifier model
 	classifier(features, labels)
